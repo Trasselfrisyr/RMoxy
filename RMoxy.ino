@@ -151,7 +151,7 @@ void loop() {
   currentMillis = millis();
   patNum = map(analogRead(CHAN_POT_PIN), 0, ADC_MAX_VALUE, 0, 15);
   tempoRead = analogRead(TIME_POT_PIN);
-  runPressRead = digitalRead(RESET_BUTTON);
+  runPressRead = digitalReadFast(RESET_BUTTON);
   if (runPressRead != runPressDebounce) debounceTimerMillis = currentMillis;
   if ((currentMillis - debounceTimerMillis) > debounceTime) {
     runPress = runPressRead;
@@ -164,7 +164,16 @@ void loop() {
     externalClk = 0;
     stepInterval = map(tempoRead, ADC_MAX_VALUE, TEMPO_THR, 50, 300);
   }
-  clkNow = digitalRead(RESET_CV);
+  resetRead = digitalReadFast(CHAN_CV_PIN);
+  if (resetRead && !resetLast) { // if reset is going high, go to step 0
+    currentStep = 0;
+    digitalWrite(LED0, bitRead(currentStep, 0));
+    digitalWrite(LED1, bitRead(currentStep, 1));
+    digitalWrite(LED2, bitRead(currentStep, 2));
+    digitalWrite(LED3, bitRead(currentStep, 3));
+  }
+  resetLast = resetRead;
+  clkNow = digitalReadFast(RESET_CV);
   if (runPress && !runPressLast) { // start/stop
     if (runStatus){
       runStatus = 0;
@@ -192,8 +201,8 @@ void loop() {
       stepTimerMillis = currentMillis; // reset interval timing for internal clock
     }
     clkLast = clkNow;
-    resetRead = digitalRead(CHAN_CV_PIN);
-    if ((resetRead && !resetLast) || (currentStep == 16) || pattern[patNum][currentStep] == 255) currentStep = 0; // start over if [reset pin is high] or [we are at step 0 if we passed 15] or [next step pattern value is 255 (reset)
+    resetRead = digitalReadFast(CHAN_CV_PIN);
+    if ((resetRead && !resetLast) || (currentStep == 16) || pattern[patNum][currentStep] == 255) currentStep = 0; // start over if we are at step 0 if we passed 15 or next step pattern value is 255 (reset)
     resetLast = resetRead;
   }
   runPressLast = runPress;
